@@ -1,0 +1,429 @@
+{% extends "core/base.html" %}
+
+{% block title %}Канбан Доска | UniFlow{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* =========================================================
+       1. АДАПТИВНЫЕ ЦВЕТА И ЭФФЕКТЫ СВЕЧЕНИЯ (НЕОН UPDATE)
+       ========================================================= */
+    :root {
+        /* ТЁМНАЯ ТЕМА - НАСТОЯЩИЙ СИНИЙ НЕОН */
+        --kb-bg: #111c44; 
+        --kb-text: #ffffff; 
+        --input-bg: rgba(0, 0, 0, 0.2); 
+
+        --kb-glow-border: #2563eb; 
+        --kb-glow-shadow: 
+            0 0 5px  rgba(37, 99, 235, 0.9),
+            0 0 15px rgba(37, 99, 235, 0.6),
+            0 0 30px rgba(37, 99, 235, 0.4);
+            
+        --kb-border: rgba(255, 255, 255, 0.1); 
+
+        --smooth-ease: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .light-mode {
+        /* СВЕТЛАЯ ТЕМА - ЭЛЕКТРИЧЕСКИЙ СИНИЙ */
+        --kb-bg: #ffffff;
+        --kb-text: #2d3748;
+        --input-bg: #f8fafc; 
+        
+        --kb-glow-border: #4f46e5; 
+        --kb-glow-shadow: 0 0 20px rgba(79, 70, 229, 0.5); 
+        --kb-border: #e2e8f0;
+    }
+
+    * { transition: var(--smooth-ease); }
+
+    .kanban-container, h1, .btn-main-add { animation: fadeIn 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    .kanban-container { 
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; 
+        width: 98%; margin: 0 auto 30px auto; align-items: start;
+    }
+    
+    /* =========================================================
+       2. КОЛОНКИ И КАРТОЧКИ
+       ========================================================= */
+    .kanban-column { 
+        background: var(--kb-bg) !important; 
+        border-radius: 30px; 
+        padding: 25px; min-height: 75vh; 
+        display: flex; flex-direction: column; overflow: hidden;
+        border: 2px solid var(--kb-glow-border) !important;
+        box-shadow: var(--kb-glow-shadow) !important;
+    }
+
+    .task-card { 
+        background: var(--bg-card) !important; 
+        border: 1px solid var(--kb-border) !important;
+        border-radius: 20px; padding: 20px; margin-bottom: 18px; 
+        color: var(--kb-text); cursor: grab; position: relative;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .task-card:hover { 
+        transform: translateY(-6px) scale(1.01) !important; 
+        border-color: var(--kb-glow-border) !important; 
+        box-shadow: var(--kb-glow-shadow) !important;
+    }
+
+    .card-header-flex { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+    .card-title { font-weight: 800; font-size: 15px; flex-grow: 1; padding-right: 10px; line-height: 1.4; }
+    
+    /* 🔥 КНОПКИ ДЕЙСТВИЙ: АНИМАЦИИ, ЦВЕТА, SVG 🔥 */
+    .card-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-action { 
+        width: 34px; height: 34px; border-radius: 12px; border: none; 
+        cursor: pointer; transition: var(--smooth-ease); display: flex; 
+        align-items: center; justify-content: center;
+    }
+    
+    .btn-edit-task { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .btn-edit-task:hover { background: #10b981; color: white; transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
+    
+    .btn-delete-task { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .btn-delete-task:hover { background: #ef4444; color: white; transform: scale(1.1) rotate(90deg); box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
+
+    .file-badge { 
+        display: inline-flex; align-items: center; gap: 8px; 
+        padding: 8px 15px; border-radius: 15px; font-weight: 800; 
+        font-size: 11px; text-decoration: none !important; margin-top: 12px;
+        border: 1px solid var(--kb-border);
+    }
+
+    .status-badge-outline { 
+        font-size: 12px; padding: 12px; border-radius: 15px; margin-top: 15px; font-weight: 800; text-align: center; 
+        background-color: rgba(16, 185, 129, 0.05) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    .btn-main-add, .btn-send-review {
+        background: linear-gradient(135deg, #4318ff 0%, #00c6ff 100%) !important; 
+        color: white !important; border: none; padding: 14px 28px; border-radius: 20px; font-weight: 800; cursor: pointer;
+        box-shadow: 0 8px 20px rgba(67, 24, 255, 0.25);
+    }
+    .btn-main-add:hover, .btn-send-review:hover { 
+        transform: translateY(-3px); box-shadow: 0 12px 25px rgba(67, 24, 255, 0.4); 
+    }
+
+    .btn-return { width: 100%; margin-top: 10px; padding: 14px; border-radius: 15px; border: none !important; background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important; color: white !important; font-weight: 800; cursor: pointer; }
+    .btn-return:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4); }
+
+    /* =========================================================
+       БЛОК КОММЕНТАРИЯ УЧИТЕЛЯ
+       ========================================================= */
+    .teacher-comment-box {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-left: 4px solid #ef4444;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        animation: pulseRed 2s infinite;
+    }
+    @keyframes pulseRed { 0% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); } 50% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); } 100% { box-shadow: 0 0 0 rgba(239, 68, 68, 0); } }
+    
+    .teacher-comment-box strong { color: #ef4444; display: block; margin-bottom: 5px; font-size: 10px; text-transform: uppercase; font-weight: 900; letter-spacing: 0.5px; }
+    .teacher-comment-box p { color: var(--kb-text); margin: 0; font-size: 13px; font-weight: 600; line-height: 1.4; }
+
+    /* =========================================================
+       4. ПРЕМИУМ-МОДАЛКИ
+       ========================================================= */
+    .modal-overlay { 
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+        background-color: rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 9999; 
+        justify-content: center; align-items: center;
+        opacity: 0; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    
+    .modal-card { 
+        background: var(--kb-bg) !important; 
+        padding: 45px 40px; border-radius: 35px; width: 480px; 
+        border: 2px solid var(--kb-glow-border) !important; 
+        box-shadow: var(--kb-glow-shadow), inset 0 0 20px rgba(59, 130, 246, 0.05) !important; 
+        position: relative; overflow: hidden;
+        transform: scale(0.9) translateY(20px);
+        transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .modal-overlay.show .modal-card { transform: scale(1) translateY(0); }
+
+    .modal-title-text {
+        font-weight: 900; font-size: 26px; margin-bottom: 25px; text-align: center;
+        background: linear-gradient(135deg, #00c6ff, #4318ff);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .light-mode .modal-title-text { background: linear-gradient(135deg, #4318ff, #2b579a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .modal-input { 
+        width: 100%; padding: 18px 25px; border-radius: 20px; 
+        background: var(--input-bg) !important; 
+        border: 1px solid var(--kb-border) !important; 
+        color: var(--kb-text) !important; outline: none; margin-bottom: 20px; font-weight: 700; font-size: 15px;
+        box-shadow: inset 0 3px 6px rgba(0,0,0,0.1);
+    }
+    .modal-input:focus { 
+        background: transparent !important;
+        border-color: var(--kb-glow-border) !important; 
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 2px 4px rgba(0,0,0,0.05) !important; 
+    }
+
+    .file-upload-box {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        border: 2px dashed rgba(59, 130, 246, 0.5); padding: 30px 20px; 
+        border-radius: 25px; cursor: pointer; 
+        background: rgba(59, 130, 246, 0.03); margin-bottom: 25px; 
+        color: var(--kb-text); position: relative; overflow: hidden;
+    }
+    .file-upload-box::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+        opacity: 0; transition: var(--smooth-ease);
+    }
+    .file-upload-box:hover {
+        border-style: solid; border-color: #3b82f6;
+        transform: translateY(-3px); box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+    }
+    .file-upload-box:hover::before { opacity: 1; }
+    
+    .file-icon-emoji { font-size: 38px; margin-bottom: 8px; transition: var(--smooth-ease); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+    .file-upload-box:hover .file-icon-emoji { transform: scale(1.15) translateY(-5px); }
+
+    .btn-cancel {
+        width: 100%; margin-top: 15px; background: transparent; border: none; 
+        color: var(--text-gray); cursor: pointer; font-weight: 800; font-size: 14px;
+        transition: var(--smooth-ease);
+    }
+    .btn-cancel:hover { color: #ef4444; transform: scale(1.05); }
+
+    /* =========================================================
+       5. ОКНО УДАЛЕНИЯ (КРАСНЫЙ НЕОН)
+       ========================================================= */
+    .delete-modal { 
+        border: 2px solid #ef4444 !important; 
+        box-shadow: 0 0 35px rgba(239, 68, 68, 0.4) !important;
+        background: var(--kb-bg) !important; 
+        text-align: center;
+    }
+    
+    .trash-icon-big { 
+        font-size: 60px; display: block; margin-bottom: 20px; 
+        filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.6)); 
+    }
+    
+    .delete-title {
+        font-weight: 900; font-size: 28px; color: #ef4444; margin-bottom: 10px;
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); 
+    }
+
+    .delete-desc {
+        color: var(--text-gray); font-size: 15px; margin-bottom: 30px; font-weight: 600;
+    }
+
+    .delete-btn-row { display: flex; gap: 15px; }
+    
+    .btn-modal-cancel { 
+        flex: 1; padding: 15px; border-radius: 15px; background: rgba(255,255,255,0.05); 
+        border: 1px solid rgba(255,255,255,0.1); color: var(--kb-text); font-weight: 800; cursor: pointer; transition: 0.3s; 
+    }
+    .btn-modal-cancel:hover { background: rgba(255,255,255,0.1); }
+    
+    .btn-modal-delete { 
+        flex: 1; padding: 15px; border-radius: 15px; background: #ef4444; border: none; 
+        color: white; font-weight: 800; cursor: pointer; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3); transition: 0.3s; 
+        text-decoration: none; display: flex; align-items: center; justify-content: center;
+    }
+    .btn-modal-delete:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(239, 68, 68, 0.5); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; width: 98%; margin: 15px auto 30px auto;">
+    <h1 style="font-size: 28px; font-weight: 900; color: var(--kb-text);">🚀 Мои задачи</h1>
+    <button class="btn-main-add" onclick="openModal('addModal')">+ Новая задача</button>
+</div>
+
+<div class="kanban-container">
+    
+    <div class="kanban-column" id="todo" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div style="font-weight: 900; font-size: 13px; color: var(--text-gray); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">📌 План</div>
+        {% for task in tasks %}{% if task.status == 'todo' %}
+            <div class="task-card" id="task-{{ task.id }}" draggable="true" ondragstart="drag(event)">
+                <div class="card-header-flex">
+                    <div class="card-title">{{ task.title }}</div>
+                    <div class="card-actions">
+                        <button type="button" class="btn-action btn-edit-task" title="Редактировать" onclick="openEditModal('{{ task.id }}', '{{ task.title|escapejs }}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn-action btn-delete-task" title="Удалить" onclick="confirmDelete('{{ task.id }}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% if task.file %}<a href="{{ task.file.url }}" target="_blank" class="file-badge dynamic-file" data-filename="{{ task.file.name }}">Загрузка...</a>{% endif %}
+            </div>
+        {% endif %}{% endfor %}
+    </div>
+
+    <div class="kanban-column" id="doing" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div style="font-weight: 900; font-size: 13px; color: #00c6ff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">⚡ В работе</div>
+        {% for task in tasks %}{% if task.status == 'doing' %}
+            <div class="task-card" id="task-{{ task.id }}" draggable="true" ondragstart="drag(event)">
+                <div class="card-header-flex">
+                    <div class="card-title">{{ task.title }}</div>
+                    <div class="card-actions">
+                        <button type="button" class="btn-action btn-edit-task" title="Редактировать" onclick="openEditModal('{{ task.id }}', '{{ task.title|escapejs }}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="btn-action btn-delete-task" title="Удалить" onclick="confirmDelete('{{ task.id }}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                {% if task.file %}<a href="{{ task.file.url }}" target="_blank" class="file-badge dynamic-file" data-filename="{{ task.file.name }}">Загрузка...</a>{% endif %}
+                
+                {% if task.teacher_comment %}
+                    <div class="teacher-comment-box">
+                        <strong>⚠️ Нужно исправить:</strong>
+                        <p>{{ task.teacher_comment }}</p>
+                    </div>
+                {% endif %}
+
+                <a href="{% url 'send_review' task.id %}" style="text-decoration:none;"><button class="btn-send-review" style="width:100%; margin-top:12px;">Отправить учителю 📤</button></a>
+            </div>
+        {% endif %}{% endfor %}
+    </div>
+
+    <div class="kanban-column" id="done" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <div style="font-weight: 900; font-size: 13px; color: #10b981; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">✅ На проверке</div>
+        {% for task in tasks %}{% if task.status == 'done' %}
+            <div class="task-card" id="task-{{ task.id }}">
+                <div class="card-header-flex"><div class="card-title">{{ task.title }}</div></div>
+                {% if task.file %}<a href="{{ task.file.url }}" target="_blank" class="file-badge dynamic-file" data-filename="{{ task.file.name }}">Загрузка...</a>{% endif %}
+                <div class="status-badge-outline">⌛ Ожидает оценки</div>
+                <a href="{% url 'return_task' task.id %}" style="text-decoration:none;"><button class="btn-return">Вернуть на доработку ↩️</button></a>
+            </div>
+        {% endif %}{% endfor %}
+    </div>
+</div>
+
+<div id="addModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 class="modal-title-text">✨ Новая задача</h3>
+        <form action="{% url 'add_task' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="text" name="title" class="modal-input" placeholder="Название задачи..." required>
+            
+            <label class="file-upload-box">
+                <span class="file-icon-emoji">☁️</span>
+                <span style="font-weight:900; font-size:16px;">Прикрепить файл</span>
+                <input type="file" name="file" style="display:none;" onchange="updateFileName(this, 'add-text')">
+                <small id="add-text" style="margin-top:8px; color:var(--text-gray); font-weight:600;">(Нажмите, чтобы выбрать)</small>
+            </label>
+
+            <button type="submit" class="btn-main-add" style="width:100%;">Создать проект 🚀</button>
+            <button type="button" onclick="closeModal('addModal')" class="btn-cancel">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="modal-card">
+        <h3 class="modal-title-text">✏️ Редактирование</h3>
+        <form id="editForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="text" name="title" id="edit-title-input" class="modal-input" required>
+            
+            <label class="file-upload-box">
+                <span class="file-icon-emoji">🔄</span>
+                <span style="font-weight:900; font-size:16px;">Заменить файл</span>
+                <input type="file" name="file" style="display:none;" onchange="updateFileName(this, 'edit-text')">
+                <small id="edit-text" style="margin-top:8px; color:var(--text-gray); font-weight:600;">(Оставьте пустым, если не меняете)</small>
+            </label>
+
+            <button type="submit" class="btn-main-add" style="width:100%;">Сохранить изменения 💾</button>
+            <button type="button" onclick="closeModal('editModal')" class="btn-cancel">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-card delete-modal">
+        <span class="trash-icon-big">🗑️</span>
+        <div class="delete-title">Удалить задачу?</div>
+        <p class="delete-desc">Это действие нельзя отменить.</p>
+        
+        <div class="delete-btn-row">
+            <button type="button" onclick="closeModal('deleteModal')" class="btn-modal-cancel">Отмена</button>
+            <a id="deleteConfirmBtn" href="#" class="btn-modal-delete">Удалить</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    function openEditModal(id, title) { document.getElementById('editForm').action = `/edit/${id}/`; document.getElementById('edit-title-input').value = title; openModal('editModal'); }
+    function confirmDelete(id) { document.getElementById('deleteConfirmBtn').href = `/delete/${id}/`; openModal('deleteModal'); }
+
+    function updateFileName(input, textId) { 
+        if (input.files && input.files[0]) { 
+            document.getElementById(textId).innerHTML = `<span style="color:#10b981; font-weight:800;">✅ Выбран:</span> <b style="color:var(--kb-text);">${input.files[0].name}</b>`; 
+        } 
+    }
+
+    function updateFileIcons() {
+        document.querySelectorAll('.dynamic-file').forEach(el => {
+            const fileName = el.getAttribute('data-filename').toLowerCase();
+            let label = 'Файл проекта'; let icon = '📄'; let colorClass = 'file-default';
+            
+            // Расширенная проверка форматов
+            if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) { label = 'Word Документ'; icon = '📘'; colorClass = 'file-word'; }
+            else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) { label = 'Excel Таблица'; icon = '📗'; colorClass = 'file-excel'; }
+            else if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) { label = 'Презентация'; icon = '📙'; colorClass = 'file-ppt'; }
+            else if (fileName.endsWith('.pdf')) { label = 'PDF Документ'; icon = '📕'; colorClass = 'file-pdf'; }
+            else if (fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z')) { label = 'Архив'; icon = '🗂️'; colorClass = 'file-zip'; }
+            else if (fileName.endsWith('.py') || fileName.endsWith('.js') || fileName.endsWith('.html') || fileName.endsWith('.css') || fileName.endsWith('.cpp')) { label = 'Исходный код'; icon = '💻'; colorClass = 'file-code'; }
+            
+            el.className = `file-badge dynamic-file ${colorClass}`;
+            el.innerHTML = `<span>${icon}</span> ${label}`;
+        });
+    }
+    document.addEventListener("DOMContentLoaded", updateFileIcons);
+
+    function allowDrop(ev) { ev.preventDefault(); }
+    function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+    function drop(ev) {
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("text");
+        var card = document.getElementById(data);
+        var col = ev.target.closest('.kanban-column');
+        if (col && card) {
+            col.appendChild(card);
+            const taskId = data.split('-')[1];
+            fetch('/update_status/', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'}, 
+                body: JSON.stringify({id: taskId, status: col.id}) 
+            }).then(() => window.location.reload()); 
+        }
+    }
+</script>
+{% endblock %}

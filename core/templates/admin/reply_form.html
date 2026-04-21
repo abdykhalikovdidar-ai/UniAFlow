@@ -1,0 +1,220 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+    /* =========================================================
+       1. КОНФИГУРАЦИЯ ЦВЕТОВ
+       ========================================================= */
+    :root {
+        --body-bg: #0b1437;
+        --chat-bg: #111c44; 
+        --text-main: #ffffff; 
+        --input-bg: rgba(255, 255, 255, 0.05); 
+        
+        --chat-glow-border: #3b82f6; 
+        --chat-border: rgba(255, 255, 255, 0.1); 
+
+        --header-bg: linear-gradient(135deg, #4318ff, #00c6ff);
+        --msg-my-bg: linear-gradient(135deg, #3b82f6, #2563eb);
+        --msg-other-bg: #1b254b;
+        
+        --accent-blue: #60a5fa;
+        --smooth-ease: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Сброс стилей админки */
+    #main, #content-main, .content { background: var(--body-bg) !important; }
+    #content { padding: 0 !important; font-family: 'DM Sans', sans-serif; background: var(--body-bg) !important; border: none !important; }
+    .breadcrumbs, .messagelist { display: none !important; }
+    
+    .chat-wrapper {
+        display: flex; justify-content: center; align-items: center;
+        padding: 20px; height: calc(100vh - 80px);
+        background: var(--body-bg);
+    }
+
+    .chat-container { 
+        width: 100%; max-width: 850px; height: 100%;
+        background: var(--chat-bg); border-radius: 24px; 
+        display: flex; flex-direction: column; overflow: hidden; 
+        border: 1px solid var(--chat-border);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+
+    /* ХЕДЕР */
+    .chat-header { 
+        padding: 20px 30px; background: var(--header-bg); 
+        color: white; display: flex; align-items: center; gap: 15px; 
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .avatar-circle {
+        width: 50px; height: 50px; background: rgba(255,255,255,0.2);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 24px; border: 2px solid rgba(255,255,255,0.3);
+    }
+
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; display: inline-block; }
+    .online { background: #00f2ad; box-shadow: 0 0 10px #00f2ad; }
+    .offline { background: #a3aed0; }
+
+    .header-info h2 { margin: 0; font-size: 18px; font-weight: 700; color: #fff; }
+    .header-badges { display: flex; gap: 5px; margin-top: 5px; }
+    .badge { 
+        font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px 8px; 
+        border-radius: 6px; text-transform: uppercase; font-weight: 600;
+    }
+
+    /* ТЕЛО ЧАТА */
+    .chat-body { 
+        flex-grow: 1; padding: 25px; overflow-y: auto; 
+        display: flex; flex-direction: column; gap: 12px;
+        background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+        background-size: 30px 30px;
+    }
+
+    /* ПУЗЫРИ */
+    .msg-group { display: flex; flex-direction: column; max-width: 75%; position: relative; }
+    .msg-my-group { align-self: flex-end; align-items: flex-end; }
+    .msg-other-group { align-self: flex-start; align-items: flex-start; }
+
+    .msg-content {
+        padding: 12px 18px; border-radius: 18px; font-size: 14px; 
+        line-height: 1.5; position: relative; transition: var(--smooth-ease);
+    }
+
+    .msg-my-content { 
+        background: var(--msg-my-bg); color: white; 
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .msg-other-content { 
+        background: var(--msg-other-bg); color: #fff; 
+        border: 1px solid var(--chat-border);
+        border-bottom-left-radius: 4px;
+    }
+
+    .msg-meta { font-size: 10px; opacity: 0.5; margin-top: 4px; font-weight: 500; }
+
+    /* ПЕЧАТАЕТ... */
+    .typing-indicator {
+        background: var(--msg-other-bg); padding: 10px 15px; border-radius: 15px;
+        display: flex; gap: 4px; width: fit-content; border: 1px solid var(--chat-border);
+    }
+    .dot { width: 6px; height: 6px; background: var(--accent-blue); border-radius: 50%; animation: bounce 1.4s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+
+    /* ФУТЕР */
+    .chat-footer { padding: 20px; background: var(--chat-bg); border-top: 1px solid var(--chat-border); }
+    .input-container { 
+        display: flex; gap: 10px; background: var(--input-bg); 
+        padding: 5px 5px 5px 20px; border-radius: 30px; border: 1px solid var(--chat-border);
+    }
+    .chat-input { 
+        flex-grow: 1; background: transparent !important; border: none !important; 
+        color: white !important; outline: none !important; font-size: 14px;
+    }
+    .send-btn { 
+        background: var(--accent-blue); color: white; border: none; 
+        width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; transition: var(--smooth-ease);
+    }
+    .send-btn:hover { transform: scale(1.1); background: #2563eb; }
+</style>
+
+<div class="chat-wrapper">
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="avatar-circle">{% if target.is_teacher %}👨‍🏫{% else %}🎓{% endif %}</div>
+            <div class="header-info">
+                <h2>{% if target.first_name %}{{ target.first_name }} {{ target.last_name }}{% else %}{{ target.username }}{% endif %}</h2>
+                <div class="header-badges">
+                    <span id="status-text"><span id="dot" class="status-dot offline"></span> <small>Не в сети</small></span>
+                    <span class="badge">ID: {{ target.id }}</span>
+                    {% if target.group %}<span class="badge">{{ target.group }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-body" id="chat-box"></div>
+
+        <div class="chat-footer">
+            <form id="chat-form" class="input-container">
+                {% csrf_token %}
+                <input type="text" id="msg-input" class="chat-input" placeholder="Введите сообщение..." autocomplete="off">
+                <button type="submit" class="send-btn">➤</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const box = document.getElementById("chat-box");
+    const input = document.getElementById("msg-input");
+    const form = document.getElementById("chat-form");
+    const dot = document.getElementById("dot");
+    const statusLabel = document.querySelector("#status-text small");
+
+    async function updateChat() {
+        try {
+            const res = await fetch('/messages/api/{{ target.id }}/');
+            const data = await res.json();
+            
+            let html = '';
+            data.messages.forEach(m => {
+                html += `
+                    <div class="msg-group ${m.is_my ? 'msg-my-group' : 'msg-other-group'}">
+                        <div class="msg-content ${m.is_my ? 'msg-my-content' : 'msg-other-content'}">
+                            ${m.text}
+                        </div>
+                        <div class="msg-meta">${m.time}</div>
+                    </div>`;
+            });
+
+            if (data.is_typing) {
+                html += `
+                    <div class="msg-group msg-other-group">
+                        <div class="typing-indicator">
+                            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                        </div>
+                    </div>`;
+            }
+
+            if (box.innerHTML !== html) {
+                box.innerHTML = html;
+                box.scrollTop = box.scrollHeight;
+            }
+
+            // Статус онлайн
+            if (data.is_online) {
+                dot.className = "status-dot online";
+                statusLabel.innerText = "В сети";
+            } else {
+                dot.className = "status-dot offline";
+                statusLabel.innerText = "Не в сети";
+            }
+        } catch (e) { console.error("API Error"); }
+    }
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const val = input.value.trim();
+        if (!val) return;
+
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        await fetch(window.location.href, {
+            method: 'POST',
+            body: new URLSearchParams({'reply_text': val}),
+            headers: {'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded'}
+        });
+        input.value = '';
+        updateChat();
+    };
+
+    setInterval(updateChat, 2000);
+    updateChat();
+</script>
+{% endblock %}

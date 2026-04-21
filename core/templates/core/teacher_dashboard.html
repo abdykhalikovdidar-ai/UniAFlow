@@ -1,0 +1,233 @@
+{% extends "core/base.html" %}
+{% block title %}Работы к проверке | UniFlow 🎓{% endblock %}
+
+{% block extra_style %}
+<style>
+    .dashboard-wrapper { max-width: 1400px; margin: 30px auto; padding: 0 15px; animation: slideUp 0.5s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- ШАПКА --- */
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--accent) 0%, #064e3b 100%);
+        border-radius: 30px; padding: 35px 40px;
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.3);
+        margin-bottom: 30px; color: white;
+    }
+    
+    .header-titles h1 { font-size: 32px; font-weight: 900; margin-bottom: 5px; display: flex; align-items: center; gap: 15px; }
+    .progress-container { width: 250px; background: rgba(255,255,255,0.1); border-radius: 10px; height: 10px; position: relative; overflow: hidden; margin-top: 10px; }
+    .progress-bar { height: 100%; background: #ffffff; box-shadow: 0 0 10px #ffffff; transition: 1s ease-in-out; }
+
+    /* --- ФИЛЬТРЫ --- */
+    .filter-bar {
+        display: flex; gap: 15px; align-items: center;
+        background: rgba(0, 0, 0, 0.05); padding: 15px; border-radius: 20px;
+        border: 1px solid var(--sidebar-border); backdrop-filter: blur(10px);
+    }
+    
+    .filter-input {
+        padding: 12px 20px; border-radius: 15px; border: 1px solid var(--sidebar-border);
+        background: var(--input-bg); color: var(--text-main); font-size: 14px; font-weight: 600; outline: none; transition: 0.3s;
+    }
+    
+    .course-toggle-group { display: flex; background: var(--input-bg); border-radius: 15px; padding: 4px; border: 1px solid var(--sidebar-border); }
+    .course-toggle-group input[type="radio"] { display: none; }
+    .course-toggle-group label { padding: 10px 16px; cursor: pointer; border-radius: 12px; color: var(--text-gray); font-weight: 800; font-size: 13px; transition: 0.3s; }
+    .course-toggle-group input[type="radio"]:checked + label { background: var(--accent); color: white; }
+
+    .btn-search { padding: 12px 30px; border-radius: 15px; background: var(--accent); color: white; font-weight: 900; font-size: 14px; text-transform: uppercase; border: none; cursor: pointer; }
+
+    /* --- ТАБЛИЦА --- */
+    .glass-table-container {
+        background: var(--bg-card); 
+        border: 1px solid var(--sidebar-border); border-radius: 30px;
+        padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    .grid-table { display: flex; flex-direction: column; gap: 15px; }
+    
+    .grid-header {
+        display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 0.8fr 3fr 1.5fr; gap: 15px;
+        padding: 0 20px 15px; border-bottom: 2px solid var(--sidebar-border);
+        font-size: 11px; font-weight: 900; color: var(--text-gray); text-transform: uppercase;
+    }
+
+    .grid-row {
+        display: grid; grid-template-columns: 1.5fr 1fr 1.5fr 0.8fr 3fr 1.5fr; gap: 15px;
+        align-items: center; background: var(--input-bg);
+        padding: 20px; border-radius: 20px; border: 1px solid var(--sidebar-border); transition: 0.3s;
+    }
+
+    .cell-student strong { font-size: 15px; color: var(--text-main); display: block; }
+    .student-badge { background: rgba(16, 185, 129, 0.1); color: var(--accent); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 900; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+    /* СТАТУС ВРЕМЕНИ */
+    .time-status { font-size: 10px; font-weight: 900; text-transform: uppercase; margin-top: 4px; display: inline-block; }
+    .status-ontime { color: #10b981; } /* Зеленый */
+    .status-late { color: #ef4444; }    /* Красный */
+
+    /* ФАЙЛ КНОПКИ */
+    .cell-file { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+    
+    .btn-download-only {
+        background: var(--accent); color: white; border: 1px solid var(--accent);
+        padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 12px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s;
+        text-decoration: none; width: fit-content;
+    }
+    .btn-download-only:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+
+    /* --- ПОЛЯ ВВОДА --- */
+    .input-wrapper { display: flex; flex-direction: column; gap: 8px; }
+    .cell-inputs { display: flex; gap: 10px; }
+    .input-grade { width: 75px; padding: 12px; border-radius: 12px; border: 1px solid var(--sidebar-border); background: var(--bg-card); color: var(--text-main); font-weight: 800; text-align: center; }
+    .input-comment { flex-grow: 1; padding: 12px 15px; border-radius: 12px; border: 1px solid var(--sidebar-border); background: var(--bg-card); color: var(--text-main); font-size: 13px; outline: none; transition: 0.3s; }
+    .input-comment:focus { border-color: var(--accent); }
+
+    .quick-hints { display: flex; gap: 6px; flex-wrap: wrap; }
+    .hint-tag { 
+        font-size: 11px; background: var(--bg-card); border: 1px solid var(--sidebar-border); 
+        padding: 5px 12px; border-radius: 10px; color: var(--text-gray); cursor: pointer; transition: 0.2s;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .hint-tag:hover { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.05); }
+
+    /* --- КНОПКИ ДЕЙСТВИЙ --- */
+    .cell-actions { display: flex; gap: 10px; }
+    .btn-action {
+        flex: 1; padding: 12px 0; border-radius: 12px; font-weight: 900; font-size: 11px;
+        cursor: pointer; transition: 0.3s; text-transform: uppercase; border: 1px solid transparent;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .btn-reject { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .btn-reject:hover { background: #ef4444; color: white; }
+
+    .btn-approve { background: rgba(16, 185, 129, 0.1); color: var(--accent); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .btn-approve:hover { background: var(--accent); color: white; }
+
+    .empty-state { text-align: center; padding: 60px; color: var(--text-gray); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div class="header-titles">
+            <h1>🎓 Панель проверки</h1>
+            <p>Осталось проверить: <strong>{{ tasks_to_review|length }}</strong> работ</p>
+            <div class="progress-container">
+                <div class="progress-bar" style="width: 70%;"></div>
+            </div>
+        </div>
+        
+        <form method="GET" class="filter-bar" style="margin-top: 25px;">
+            <input type="text" name="q" class="filter-input" style="flex-grow: 2;" value="{{ query|default:'' }}" placeholder="🔍 Поиск по студенту или заданию...">
+            <div class="course-toggle-group">
+                {% for i in "1234" %}
+                <input type="radio" id="c-{{i}}" name="course" value="{{i}}" {% if current_course == i %}checked{% endif %}>
+                <label for="c-{{i}}">{{i}} курс</label>
+                {% endfor %}
+            </div>
+            <input type="text" name="group" class="filter-input" style="width: 140px;" value="{{ current_group|default:'' }}" placeholder="Группа">
+            <button type="submit" class="btn-search">Применить</button>
+        </form>
+    </div>
+
+    <div class="glass-table-container">
+        <div class="grid-table">
+            <div class="grid-header">
+                <div>Студент</div>
+                <div>Курс и Группа</div> 
+                <div>Задание</div>
+                <div style="text-align: center;">Файл</div>
+                <div>Оценка и Комментарий</div>
+                <div style="text-align: center;">Решение</div>
+            </div>
+
+            {% for task in tasks_to_review %}
+                <form method="POST" action="{% url 'review_task' task.id %}" class="grid-row" onsubmit="return validateForm(this, event)">
+                    {% csrf_token %}
+                    
+                    <div class="cell-student">
+                        <strong>{{ task.executor.get_full_name|default:task.executor.username }}</strong>
+                        <small style="color: var(--text-gray); font-size: 12px;">@{{ task.executor.username }}</small>
+                    </div>
+
+                    <div class="cell-group-course">
+                        <span class="student-badge">{{ task.executor.profile.group_name|default:"-" }}</span>
+                        <div style="font-size: 12px; color: var(--text-gray); margin-top:4px;">{{ task.executor.profile.course }} курс</div>
+                    </div>
+                    
+                    <div class="cell-task">
+                        <div style="font-weight: 700;">{{ task.title }}</div>
+                        {% if task.assignment and task.assignment.deadline %}
+                            {% if task.submitted_at <= task.assignment.deadline %}
+                                <span class="time-status status-ontime">✅ Здано вовремя</span>
+                            {% else %}
+                                <span class="time-status status-late">⏰ Опоздание</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="time-status" style="color: var(--text-gray);">Без дедлайна</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="cell-file">
+                        {% if task.file %}
+                            <a href="{{ task.file.url }}" download class="btn-download-only">💾 Скачать</a>
+                        {% else %}
+                            <span style="color:var(--text-gray); font-size:12px;">Без файла</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="input-wrapper">
+                        <div class="cell-inputs">
+                            <input type="number" name="grade" class="input-grade" placeholder="0-100" max="100" min="0">
+                            <input type="text" name="comment" class="input-comment" placeholder="Что исправить?">
+                        </div>
+                        <div class="quick-hints">
+                            <span class="hint-tag" onclick="addHint(this, 'Мало текста.')">📖 Мало текста</span>
+                            <span class="hint-tag" onclick="addHint(this, 'Исправь оформление.')">🎨 Оформление</span>
+                            <span class="hint-tag" onclick="addHint(this, 'Ошибка файла.')">📂 Ошибка файла</span>
+                            <span class="hint-tag" onclick="addHint(this, 'Плагиат!')">🚫 Плагиат</span>
+                            <span class="hint-tag" onclick="addHint(this, 'Не по теме.')">❌ Не по теме</span>
+                        </div>
+                    </div>
+                    
+                    <div class="cell-actions">
+                        <button type="submit" name="action" value="reject" class="btn-action btn-reject">✖ ВЕРНУТЬ</button>
+                        <button type="submit" name="action" value="approve" class="btn-action btn-approve">✔ ПРИНЯТЬ</button>
+                    </div>
+                </form>
+            {% empty %}
+                <div class="empty-state">🎉 Все работы проверены!</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function addHint(element, text) {
+        const row = element.closest('.grid-row');
+        const input = row.querySelector('.input-comment');
+        input.value = text;
+        input.focus();
+    }
+
+    function validateForm(form, event) {
+        const action = event.submitter.value;
+        const grade = form.querySelector('.input-grade').value;
+        const comment = form.querySelector('.input-comment').value;
+
+        if (action === 'approve' && !grade) { 
+            alert('Пожалуйста, поставьте оценку!'); 
+            return false; 
+        }
+        if (action === 'reject' && !comment) { 
+            alert('Укажите причину возврата в комментарии!'); 
+            return false; 
+        }
+        return true;
+    }
+</script>
+{% endblock %}

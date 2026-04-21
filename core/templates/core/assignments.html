@@ -1,0 +1,370 @@
+{% extends "core/base.html" %}
+{% block title %}Проекты и Задания | UniFlow{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+    :root { --smooth-ease: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
+    
+    .header-row { display: flex; justify-content: space-between; align-items: center; width: 98%; margin: 15px auto 30px auto; animation: slideDown 0.5s ease-out; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .page-title { font-size: 28px; font-weight: 900; color: var(--text-main); }
+    
+    /* Кнопки */
+    .btn-create-task {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white; border: none; padding: 14px 28px; border-radius: 20px;
+        font-weight: 800; cursor: pointer; transition: var(--smooth-ease);
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+    .btn-create-task:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 25px rgba(16, 185, 129, 0.5); }
+
+    .btn-draft {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--sidebar-border) !important;
+        transition: var(--smooth-ease) !important;
+        cursor: pointer;
+    }
+    .btn-draft:hover {
+        background: rgba(255, 255, 255, 1) !important;
+        color: #000 !important;
+        border-color: var(--accent) !important;
+        transform: translateY(-2px);
+    }
+
+    /* Сетка и Карточки */
+    .assignments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 25px; width: 98%; margin: 0 auto; }
+    
+    .assignment-card { background: var(--bg-card); border-radius: 25px; padding: 25px; border: 1px solid var(--sidebar-border); position: relative; overflow: hidden; transition: var(--smooth-ease); box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; animation: fadeUp 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    .card-active:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: var(--shadow-glow); }
+
+    .card-draft { border: 1px dashed #6366f1 !important; background: rgba(99, 102, 241, 0.02); }
+    .card-draft::before { content: "ЧЕРНОВИК"; position: absolute; top: 10px; right: -30px; background: #6366f1; color: white; font-size: 9px; font-weight: 900; padding: 4px 40px; transform: rotate(45deg); z-index: 1; }
+
+    .card-expired { opacity: 0.6; filter: grayscale(80%); pointer-events: none; }
+    .card-expired .btn-delete-task, .card-expired .btn-edit-task, .card-expired .btn-copy-task { pointer-events: auto; }
+
+    .card-header-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    
+    .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge-type { background: rgba(255,255,255,0.05); border: 1px solid var(--sidebar-border); padding: 5px 12px; border-radius: 10px; font-size: 11px; font-weight: 800; color: var(--text-gray); }
+    .badge-bonus { background: rgba(255, 193, 7, 0.1); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); padding: 5px 12px; border-radius: 10px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+
+    .card-actions { display: flex; gap: 8px; z-index: 2; }
+    .btn-action { width: 34px; height: 34px; border-radius: 12px; border: none; cursor: pointer; transition: var(--smooth-ease); display: flex; align-items: center; justify-content: center; }
+    
+    .btn-copy-task { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+    .btn-copy-task svg { width: 16px; height: 16px; transition: var(--smooth-ease); }
+    .btn-copy-task:hover { background: #6366f1; color: white; transform: scale(1.15); box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+
+    .btn-edit-task { background: rgba(16, 185, 129, 0.1); color: var(--accent); font-size: 14px;}
+    .btn-edit-task:hover { background: var(--accent); color: white; transform: scale(1.1) rotate(-10deg); }
+    
+    .btn-delete-task { background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 14px;}
+    .btn-delete-task:hover { background: #ef4444 !important; color: white !important; transform: scale(1.1) rotate(90deg); box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+
+    .task-title { font-size: 20px; font-weight: 900; margin-bottom: 10px; color: var(--text-main); line-height: 1.3; }
+    .task-desc { font-size: 13px; color: var(--text-gray); margin-bottom: 20px; line-height: 1.5; flex-grow: 1; }
+    
+    .file-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 15px; border-radius: 15px; font-weight: 800; font-size: 11px; text-decoration: none !important; margin-bottom: 15px; width: fit-content; border: 1px solid var(--sidebar-border); color: var(--text-main); background: rgba(255,255,255,0.02); transition: var(--smooth-ease); }
+    .file-badge:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+    .task-info-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; background: rgba(0,0,0,0.1); padding: 15px; border-radius: 15px; border: 1px solid var(--sidebar-border); }
+    .info-item { display: flex; justify-content: space-between; align-items: center; }
+    .info-label { font-size: 10px; text-transform: uppercase; font-weight: 800; color: var(--accent); }
+    .info-value { font-size: 13px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+
+    /* НЕОНОВЫЕ КРУЖКИ */
+    .difficulty-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .dot-easy { background: #00c853; box-shadow: 0 0 10px #00c853; }
+    .dot-medium { background: #ff9800; box-shadow: 0 0 10px #ff9800; }
+    .dot-hard { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+    
+    .time-badge { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 15px; border-radius: 15px; font-weight: 800; font-size: 12px; width: 100%; margin-bottom: 15px; }
+    .time-active { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .time-expired { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* МОДАЛКИ */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 9999; justify-content: center; align-items: center; opacity: 0; transition: var(--smooth-ease); }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-card { background: var(--bg-card) !important; padding: 25px 30px; border-radius: 30px; width: 520px; border: 1px solid var(--sidebar-border); position: relative; transform: scale(0.9) translateY(20px); transition: var(--smooth-ease); box-shadow: 0 25px 50px rgba(0,0,0,0.3); max-height: 95vh; overflow-y: auto; }
+    .modal-overlay.show .modal-card { transform: scale(1) translateY(0); border-color: var(--accent); }
+
+    /* Специальный стиль для модалки удаления */
+    .modal-delete-active { border-color: #ef4444 !important; box-shadow: 0 0 30px rgba(239, 68, 68, 0.2) !important; }
+    .trash-icon-neon { font-size: 60px; margin-bottom: 15px; display: inline-block; filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.8)); animation: pulse-red 2s infinite; }
+    @keyframes pulse-red { 0%, 100% { filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6)); transform: scale(1); } 50% { filter: drop-shadow(0 0 25px rgba(239, 68, 68, 1)); transform: scale(1.1); } }
+
+    .copy-icon-neon { font-size: 60px; margin-bottom: 20px; display: inline-block; filter: drop-shadow(0 0 15px rgba(0, 200, 83, 0.8)); animation: pulse-green 2s infinite; }
+    @keyframes pulse-green { 0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 200, 83, 0.6)); transform: scale(1); } 50% { filter: drop-shadow(0 0 25px rgba(0, 200, 83, 1)); transform: scale(1.1); } }
+
+    .field-hint { display: block; margin-bottom: 4px; font-weight: 800; color: var(--accent); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .form-group { flex: 1; display: flex; flex-direction: column; }
+    .form-input, .form-textarea { width: 100%; padding: 10px 15px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--sidebar-border); color: var(--text-main); font-family: inherit; font-size: 13px; outline: none; transition: 0.3s; }
+    .form-input:focus, .form-textarea:focus { border-color: var(--accent); background: rgba(16, 185, 129, 0.05); }
+
+    .file-upload-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 2px dashed var(--sidebar-border); padding: 25px; border-radius: 20px; cursor: pointer; background: rgba(16, 185, 129, 0.02); transition: var(--smooth-ease); }
+    .file-upload-box:hover { border-color: var(--accent); background: rgba(16, 185, 129, 0.08); transform: translateY(-3px); }
+    .file-upload-box.has-file { border-style: solid; border-color: var(--accent); background: rgba(16, 185, 129, 0.1); }
+
+    .btn-submit-task { width: 100%; margin-top: 15px; font-size: 15px; padding: 15px; border-radius: 15px; font-weight: 800; border: none; transition: var(--smooth-ease); cursor: pointer; }
+    .btn-cancel-task { width: 100%; margin-top: 8px; padding: 10px; background: transparent; border: none; color: var(--text-gray); cursor: pointer; font-weight: 800; font-size: 11px; text-transform: uppercase; }
+
+    .custom-select-wrapper { position: relative; width: 100%; }
+    .custom-select-trigger { width: 100%; padding: 10px 15px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--sidebar-border); color: var(--text-main); font-size: 13px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; font-weight: 700; }
+    .custom-select-options { position: absolute; top: calc(100% + 5px); left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--accent); border-radius: 15px; z-index: 99999; opacity: 0; visibility: hidden; transform: translateY(-5px); transition: 0.2s; overflow: hidden; }
+    .custom-select-wrapper.open .custom-select-options { opacity: 1; visibility: visible; transform: translateY(0); }
+    .custom-option { padding: 10px 15px; color: var(--text-main); font-size: 13px; cursor: pointer; transition: 0.2s; font-weight: 600; border-bottom: 1px solid var(--sidebar-border); }
+    .custom-option:hover { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-row">
+    <h1 class="page-title">📚 Проекты и Задания</h1>
+    {% if user.profile.role == 'teacher' %}
+        <button class="btn-create-task" onclick="openModal('addAssignmentModal')">+ Выдать задание</button>
+    {% endif %}
+</div>
+
+<div class="assignments-grid">
+    {% for assignment in assignments %}
+        {% if not assignment.is_draft or user.profile.role == 'teacher' %}
+        <div class="assignment-card 
+            {% if assignment.is_draft %}card-draft{% endif %} 
+            {% if assignment.is_expired and not assignment.is_draft %}card-expired{% elif not assignment.is_draft %}card-active{% endif %}" 
+            id="card-{{ assignment.id }}">
+            
+            <div class="card-header-meta">
+                <div class="badge-row">
+                    <div class="badge-type">
+                        {% if assignment.type == 'word' %}📘 Word{% elif assignment.type == 'excel' %}📗 Excel{% elif assignment.type == 'powerpoint' %}📙 PPT{% elif assignment.type == 'pdf' %}📕 PDF{% elif assignment.type == 'zip' %}🗂️ Архив{% elif assignment.type == 'code' %}💻 Код{% else %}📄 Проект{% endif %}
+                    </div>
+                    {% if assignment.speed_bonus and assignment.speed_bonus > 0 %}
+                    <div class="badge-bonus">🏆 +{{ assignment.speed_bonus }} за скорость</div>
+                    {% endif %}
+                </div>
+
+                {% if user.profile.role == 'teacher' %}
+                    <div class="card-actions">
+                        <button type="button" class="btn-action btn-copy-task" onclick="handleCopy('{{ assignment.id }}', '{{ assignment.title|escapejs }}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        </button>
+                        <button type="button" class="btn-action btn-edit-task" onclick="openEditModal('{{ assignment.id }}', '{{ assignment.title|escapejs }}', '{{ assignment.description|escapejs }}', '{{ assignment.target_course|escapejs }}', '{{ assignment.target_group|escapejs }}', '{{ assignment.deadline|date:'Y-m-d H:i' }}', '{{ assignment.max_grade|default:100 }}', '{{ assignment.type }}', '{{ assignment.difficulty }}', '{{ assignment.speed_bonus|default:0 }}')">✎</button>
+                        <button type="button" class="btn-action btn-delete-task" onclick="handleDelete('{{ assignment.id }}', '{{ assignment.title|escapejs }}')">✖</button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="task-title">{{ assignment.title }}</div>
+            <div class="task-desc">{{ assignment.description|truncatechars:120 }}</div>
+            {% if assignment.file %}<a href="{{ assignment.file.url }}" target="_blank" class="file-badge">📎 Материалы</a>{% endif %}
+            
+            <div class="task-info-grid">
+                <div class="info-item">
+                    <span class="info-label">⚡ Сложность</span>
+                    <span class="info-value">
+                        {% if assignment.difficulty == 'hard' %}
+                            <span class="difficulty-dot dot-hard"></span>
+                        {% elif assignment.difficulty == 'medium' %}
+                            <span class="difficulty-dot dot-medium"></span>
+                        {% else %}
+                            <span class="difficulty-dot dot-easy"></span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">🎁 Бонус</span>
+                    <span class="info-value">
+                        {% if assignment.speed_bonus and assignment.speed_bonus > 0 %}🔥 +{{ assignment.speed_bonus }} баллов{% else %}0{% endif %}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">🎓 Курс / Группа</span>
+                    <span class="info-value">{{ assignment.target_course|default:"-" }} / {{ assignment.target_group|default:"-" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">🏆 Max Балл</span>
+                    <span class="info-value" style="color:var(--accent)">{{ assignment.max_grade }}</span>
+                </div>
+            </div>
+            
+            <div class="time-badge {% if assignment.is_draft %}time-active{% elif assignment.is_expired %}time-expired{% else %}time-active{% endif %}">
+                {% if assignment.is_draft %}📁 В черновиках{% elif assignment.is_expired %}🔒 Срок вышел{% else %}⏳ До: {{ assignment.deadline|date:"d M, H:i" }}{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    {% empty %}
+        <div style="grid-column:1/-1; text-align:center; padding:60px; color:var(--text-gray);"><h2>Заданий пока нет!</h2></div>
+    {% endfor %}
+</div>
+
+<div id="addAssignmentModal" class="modal-overlay">
+    <div class="modal-card">
+        <h2 style="color:var(--text-main); text-align:center; margin-bottom:15px; font-weight:900; font-size:22px;">✨ Новое задание</h2>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:12px;"><label class="field-hint">Название проекта</label><input type="text" name="title" class="form-input" required></div>
+            <div class="form-row">
+                <div class="form-group"><label class="field-hint">Формат</label>
+                    <div class="custom-select-wrapper" id="createFormatSelect"><input type="hidden" name="type" value="word"><div class="custom-select-trigger" onclick="toggleDropdown('createFormatSelect', event)"><span>📘 Word</span><span>▼</span></div>
+                        <div class="custom-select-options">
+                            <div class="custom-option" data-value="word" onclick="selectFormat('createFormatSelect', this)">📘 Word</div>
+                            <div class="custom-option" data-value="excel" onclick="selectFormat('createFormatSelect', this)">📗 Excel</div>
+                            <div class="custom-option" data-value="powerpoint" onclick="selectFormat('createFormatSelect', this)">📙 PPT</div>
+                            <div class="custom-option" data-value="code" onclick="selectFormat('createFormatSelect', this)">💻 Код</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group"><label class="field-hint">Балл</label><input type="number" name="max_grade" class="form-input" value="100"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="field-hint">Курс</label><input type="text" name="target_course" class="form-input"></div>
+                <div class="form-group"><label class="field-hint">Группа</label><input type="text" name="target_group" class="form-input"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="field-hint">Сложность</label>
+                    <div class="custom-select-wrapper" id="createDiffSelect"><input type="hidden" name="difficulty" value="medium"><div class="custom-select-trigger" onclick="toggleDropdown('createDiffSelect', event)"><span>🟡 Средне</span><span>▼</span></div>
+                        <div class="custom-select-options">
+                            <div class="custom-option" data-value="easy" onclick="selectFormat('createDiffSelect', this)">🟢 Легко</div>
+                            <div class="custom-option" data-value="medium" onclick="selectFormat('createDiffSelect', this)">🟡 Средне</div>
+                            <div class="custom-option" data-value="hard" onclick="selectFormat('createDiffSelect', this)">🔴 Тяжело</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group"><label class="field-hint">Бонус</label><input type="number" name="speed_bonus" class="form-input" value="0"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;"><label class="field-hint">Описание</label><textarea name="description" class="form-textarea" style="height:70px;" required></textarea></div>
+            <div class="form-group" style="margin-bottom:15px;"><label class="file-upload-box"><span style="font-size: 28px;">☁️</span><span id="file-create-name" style="font-weight:800; font-size:12px;">Выбрать файл</span><input type="file" name="file" style="display:none;" onchange="updateFileName(this, 'file-create-name')"></label></div>
+            <div class="form-group" style="margin-bottom:20px;"><label class="field-hint">Дедлайн</label><input type="text" id="create-picker" name="deadline" class="form-input" required readonly></div>
+            <button type="submit" name="action" value="publish" class="btn-create-task btn-submit-task">Опубликовать 🚀</button>
+            <button type="submit" name="action" value="draft" class="btn-submit-task btn-draft">💾 В черновики</button>
+            <button type="button" onclick="closeModal('addAssignmentModal')" class="btn-cancel-task">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<div id="editAssignmentModal" class="modal-overlay">
+    <div class="modal-card">
+        <h2 style="color:var(--text-main); text-align:center; margin-bottom:15px; font-size:20px; font-weight:900;">✎ Редактировать</h2>
+        <form id="edit-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="type" id="edit-type">
+            <input type="hidden" name="difficulty" id="edit-difficulty">
+            <input type="hidden" name="target_course" id="edit-course-hidden">
+            <input type="hidden" name="target_group" id="edit-group-hidden">
+
+            <div class="form-group" style="margin-bottom:12px;"><label class="field-hint">Название</label><input type="text" name="title" id="edit-title" class="form-input" required></div>
+            <div class="form-row">
+                <div class="form-group"><label class="field-hint">Балл</label><input type="number" name="max_grade" id="edit-max-grade" class="form-input"></div>
+                <div class="form-group"><label class="field-hint">Бонус</label><input type="number" name="speed_bonus" id="edit-speed-bonus" class="form-input"></div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;"><label class="field-hint">Описание</label><textarea name="description" id="edit-description" class="form-textarea" style="height:80px;" required></textarea></div>
+            <div class="form-group" style="margin-bottom:15px;"><label class="field-hint">Дедлайн</label><input type="text" id="edit-picker" name="deadline" class="form-input" required readonly></div>
+            <button type="submit" class="btn-create-task btn-submit-task">Сохранить ✨</button>
+            <button type="button" onclick="closeModal('editAssignmentModal')" class="btn-cancel-task">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<div id="deleteConfirmModal" class="modal-overlay">
+    <div class="modal-card modal-delete-active" style="width: 420px; text-align: center;">
+        <div class="trash-icon-neon">🗑️</div>
+        <h2 style="color:#ef4444; font-weight:900; letter-spacing: 1px;">УДАЛИТЬ ЗАДАНИЕ?</h2>
+        <p id="delete-modal-text" style="color:var(--text-gray); margin-bottom:10px; font-weight: 600;"></p>
+        <p style="color: #ef4444; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 25px; opacity: 0.8;">
+        </p>
+        <button id="confirm-delete-btn" class="btn-create-task" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); width: 100%; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);">УДАЛИТЬ НАВСЕГДА</button>
+        <button type="button" onclick="closeModal('deleteConfirmModal')" class="btn-cancel-task">Я ПЕРЕДУМАЛ, ОСТАВИТЬ</button>
+    </div>
+</div>
+
+<div id="copyConfirmModal" class="modal-overlay">
+    <div class="modal-card" style="text-align: center;">
+        <div class="copy-icon-neon">📋</div>
+        <h2 style="color:var(--text-main); font-weight:900;">КОПИРОВАТЬ?</h2>
+        <p id="copy-modal-text" style="color:var(--text-gray); margin-bottom:25px;"></p>
+        <button id="confirm-copy-btn" class="btn-create-task" style="background: #10b981; width: 100%;">КОПИРОВАТЬ</button>
+        <button type="button" onclick="closeModal('copyConfirmModal')" class="btn-cancel-task">ОТМЕНА</button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/ru.js"></script>
+<script>
+    const fpConfig = { enableTime: true, dateFormat: "Y-m-d H:i", locale: "ru", time_24hr: true, minDate: "today" };
+    flatpickr("#create-picker", fpConfig);
+    const editFp = flatpickr("#edit-picker", fpConfig);
+
+    function openModal(id) {
+        const m = document.getElementById(id);
+        if(m) { m.style.display = 'flex'; setTimeout(() => m.classList.add('show'), 10); }
+    }
+    
+    function closeModal(id) {
+        const m = document.getElementById(id);
+        if(m) { m.classList.remove('show'); setTimeout(() => m.style.display = 'none', 300); }
+    }
+    
+    function toggleDropdown(id, event) {
+        event.stopPropagation();
+        document.getElementById(id).classList.toggle('open');
+    }
+    
+    function selectFormat(id, opt) {
+        const w = document.getElementById(id);
+        w.querySelector('input').value = opt.dataset.value;
+        w.querySelector('.custom-select-trigger span').innerHTML = opt.innerHTML;
+        w.classList.remove('open');
+    }
+    
+    function updateFileName(input, textId) {
+        const label = document.getElementById(textId);
+        if (input.files[0]) {
+            label.innerHTML = `✅ ${input.files[0].name}`;
+            input.closest('.file-upload-box').classList.add('has-file');
+        }
+    }
+
+    function handleCopy(id, title) {
+        document.getElementById('copy-modal-text').innerText = `Скопировать задание "${title}"?`;
+        document.getElementById('confirm-copy-btn').onclick = () => window.location.href = `/assignments/copy/${id}/`;
+        openModal('copyConfirmModal');
+    }
+
+    function handleDelete(id, title) {
+        document.getElementById('delete-modal-text').innerText = `Вы действительно хотите удалить "${title}"?`;
+        document.getElementById('confirm-delete-btn').onclick = () => window.location.href = `/assignments/delete/${id}/`;
+        openModal('deleteConfirmModal');
+    }
+
+    function openEditModal(id, title, desc, course, group, deadline, grade, type, diff, bonus) {
+        document.getElementById('edit-form').action = `/assignments/edit/${id}/`;
+        document.getElementById('edit-title').value = title;
+        document.getElementById('edit-description').value = desc;
+        document.getElementById('edit-max-grade').value = grade;
+        document.getElementById('edit-speed-bonus').value = bonus;
+        
+        document.getElementById('edit-type').value = type;
+        document.getElementById('edit-difficulty').value = diff;
+        document.getElementById('edit-course-hidden').value = course;
+        document.getElementById('edit-group-hidden').value = group;
+
+        editFp.setDate(deadline);
+        openModal('editAssignmentModal');
+    }
+
+    window.onclick = (e) => {
+        if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
+        if (!e.target.closest('.custom-select-wrapper')) {
+            document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
+        }
+    }
+</script>
+{% endblock %}

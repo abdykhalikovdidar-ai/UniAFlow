@@ -1,0 +1,275 @@
+{% extends "core/base.html" %}
+{% load custom_filters %}
+
+{% block title %}Журнал | UniFlow 🎓{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* --- БАЗОВЫЕ ПЕРЕМЕННЫЕ (ТЕМНАЯ ТЕМА ПО УМОЛЧАНИЮ) --- */
+    :root {
+        --bg-journal: #0a1a14;
+        --text-main-j: #ffffff;
+        --text-gray-j: rgba(255, 255, 255, 0.6);
+        --border-j: rgba(5, 205, 153, 0.2);
+        --header-grad: linear-gradient(135deg, #05cd99 0%, #064e3b 100%);
+        --input-bg-j: rgba(5, 205, 153, 0.05);
+        --sticky-bg-j: #0a1a14;
+        --accent-j: #05cd99;
+        --grid-line-j: rgba(5, 205, 153, 0.03);
+        --row-hover-j: rgba(5, 205, 153, 0.05);
+    }
+
+    /* --- СВЕТЛАЯ ТЕМА --- */
+    .light-mode {
+        --bg-journal: #ffffff;
+        --text-main-j: #2b3674;
+        --text-gray-j: #707eae;
+        --border-j: #e5e7eb;
+        --input-bg-j: #f4f7fe;
+        --sticky-bg-j: #ffffff; 
+        --grid-line-j: rgba(0, 0, 0, 0.02);
+        --row-hover-j: #f4f7fe;
+    }
+
+    .dashboard-wrapper { max-width: 1400px; margin: 30px auto; padding: 0 15px; animation: slideUp 0.5s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- ШАПКА --- */
+    .dashboard-header {
+        background: var(--header-grad);
+        border-radius: 30px; padding: 35px 40px;
+        box-shadow: 0 15px 40px rgba(5, 205, 153, 0.3);
+        margin-bottom: 30px; color: white;
+        position: relative; overflow: hidden;
+    }
+    
+    .header-titles h1 { font-size: 32px; font-weight: 900; margin-bottom: 5px; display: flex; align-items: center; gap: 15px; }
+    .header-titles p { opacity: 0.9; font-size: 14px; }
+
+    /* --- ФИЛЬТРЫ --- */
+    .filter-bar {
+        display: flex; gap: 15px; align-items: center;
+        background: rgba(0, 0, 0, 0.15); padding: 15px; border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 25px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .filter-input {
+        padding: 12px 20px; border-radius: 15px; border: 1px solid var(--border-j);
+        background: var(--input-bg-j); color: var(--text-main-j); font-size: 14px; font-weight: 600; outline: none; transition: 0.3s;
+    }
+
+    .course-toggle-group { display: flex; background: var(--input-bg-j); border-radius: 15px; padding: 4px; border: 1px solid var(--border-j); }
+    .course-toggle-group input[type="radio"] { display: none; }
+    .course-toggle-group label { padding: 10px 18px; cursor: pointer; border-radius: 12px; color: var(--text-gray-j); font-weight: 800; font-size: 13px; transition: 0.3s; }
+    .course-toggle-group input[type="radio"]:checked + label { background: var(--accent-j); color: white; box-shadow: 0 4px 10px rgba(5, 205, 153, 0.3); }
+
+    .btn-search { 
+        padding: 12px 30px; border-radius: 15px; 
+        background: var(--accent-j); color: white; 
+        font-weight: 900; font-size: 14px; text-transform: uppercase; 
+        border: none; cursor: pointer; transition: 0.3s; 
+    }
+    .btn-search:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 205, 153, 0.4); }
+
+    /* --- ТАБЛИЦА (ИСПРАВЛЕНО) --- */
+    .journal-box {
+        background: var(--bg-journal); 
+        background-image: radial-gradient(var(--grid-line-j) 1px, transparent 1px);
+        background-size: 30px 30px;
+        border: 1px solid var(--border-j); 
+        border-radius: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        overflow: auto; 
+        max-height: 75vh;
+        /* Удалили min-height, чтобы не было пустоты */
+        position: relative;
+    }
+
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1000px; }
+    tr:hover td { background-color: var(--row-hover-j); }
+
+    thead th {
+        position: sticky; top: 0; z-index: 101;
+        padding: 20px 15px;
+        color: var(--accent-j); font-size: 12px;
+        text-transform: uppercase; font-weight: 900;
+        background: var(--sticky-bg-j) !important;
+        border-bottom: 2px solid var(--border-j);
+    }
+
+    /* БОКОВАЯ ПАНЕЛЬ С ИМЕНАМИ */
+    .sticky-col { 
+        position: sticky; left: 0; z-index: 100;
+        background: var(--sticky-bg-j) !important;
+        padding: 15px 20px;
+        border-right: 1px solid var(--border-j);
+        color: var(--text-main-j);
+        transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .name-main { font-weight: 700; color: var(--text-main-j); font-size: 14px; }
+    .group-sub { font-size: 10px; color: var(--accent-j); font-weight: 600; }
+
+    .ava-ring { 
+        width: 44px; height: 44px; border-radius: 50%; 
+        background: linear-gradient(135deg, #05cd99, #10e3a1); 
+        padding: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .ava-inner { width: 100%; height: 100%; border-radius: 50%; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .light-mode .ava-inner { background: #e5e7eb; }
+    .ava-inner img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ПОЛЯ ОЦЕНОК */
+    .grade-input {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: var(--input-bg-j) !important; 
+        border: 1px solid var(--border-j);
+        color: var(--text-main-j) !important; 
+        text-align: center; font-weight: 700; outline: none; transition: 0.2s;
+    }
+    .grade-input:focus { border-color: var(--accent-j); box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.2); background: var(--bg-journal) !important; }
+    .grade-input.filled { background: rgba(5, 205, 153, 0.1) !important; border-color: var(--accent-j); color: var(--accent-j) !important; }
+
+    .total-badge {
+        background: linear-gradient(135deg, #05cd99, #10e3a1); color: #000; 
+        padding: 8px 15px; border-radius: 10px; font-weight: 900;
+    }
+
+    /* ПУСТОЕ СОСТОЯНИЕ (ИСПРАВЛЕНО) */
+    .empty-state {
+        text-align: center; 
+        width: 100%;
+        padding: 80px 40px; /* Увеличили внутренние отступы вместо фиксированной высоты родителя */
+    }
+    .empty-icon-wrapper {
+        width: 100px; height: 100px;
+        background: var(--input-bg-j);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 20px;
+        border: 1px solid var(--border-j);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.05); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.8; }
+    }
+    .empty-icon { font-size: 40px; }
+    .empty-state h3 { color: var(--text-main-j); font-weight: 800; font-size: 22px; margin-bottom: 8px; }
+    .empty-state p { color: var(--text-gray-j); font-size: 15px; max-width: 400px; margin: 0 auto; line-height: 1.5; }
+
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <div class="dashboard-header">
+        <div class="header-titles">
+            <h1>🎓 Журнал успеваемости</h1>
+            <p>Централизованный учет студентов <strong>UniFlow</strong></p>
+        </div>
+        
+        <form method="GET" class="filter-bar">
+            <input type="text" name="group" class="filter-input" style="flex-grow: 2;" 
+                   placeholder="🔍 Поиск студента..." value="{{ group_filter|default:'' }}">
+
+            <div class="course-toggle-group">
+                <input type="radio" id="c-all" name="course" value="" {% if not course_filter %}checked{% endif %}>
+                <label for="c-all">Все</label>
+                {% for i in "1234" %}
+                <input type="radio" id="c-{{i}}" name="course" value="{{i}}" {% if course_filter == i %}checked{% endif %}>
+                <label for="c-{{i}}">{{i}} курс</label>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn-search">Применить</button>
+        </form>
+    </div>
+
+    <div class="journal-box">
+        {% if students %}
+            <table>
+                <thead>
+                    <tr>
+                        <th class="sticky-col">Студент</th>
+                        {% for date in all_dates %}
+                        <th style="text-align:center;">{{ date|date:"d.m"|default:date }}</th>
+                        {% endfor %}
+                        <th style="text-align:center;">ИТОГО</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in students %}
+                    {% if not s.user.is_staff %}
+                    <tr>
+                        <td class="sticky-col">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="ava-ring">
+                                    <div class="ava-inner">
+                                        {% if s.user.profile.image %}
+                                            <img src="{{ s.user.profile.image.url }}" alt="ava">
+                                        {% else %}
+                                            <span style="color:#05cd99; font-weight:900;">{{ s.user.first_name|first }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div style="white-space: nowrap;">
+                                    <div class="name-main">{{ s.user.first_name }} {{ s.user.last_name }}</div>
+                                    <div class="group-sub">{{ s.group_name }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        {% for date in all_dates %}
+                        <td style="text-align:center; padding: 10px 5px;">
+                            {% with grade=s.grades_by_date|get_item:date %}
+                            <input type="number" class="grade-input student-{{ s.user.id }} {% if grade %}filled{% endif %}"
+                                   value="{{ grade|default:'' }}" onchange="saveInlineGrade({{ s.user.id }}, '{{ date|date:'Y-m-d'|default:date }}', this)">
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td style="text-align:center;"><span class="total-badge" id="total-{{ s.user.id }}">{{ s.total_score }}</span></td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon-wrapper">
+                    <div class="empty-icon">📂</div>
+                </div>
+                <h3>Список пуст</h3>
+                <p>На данном курсе студентов пока нет, либо они не соответствуют вашему поисковому запросу.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function updateStudentTotal(studentId) {
+        const inputs = document.querySelectorAll(`.student-${studentId}`);
+        let sum = 0;
+        inputs.forEach(input => { sum += parseFloat(input.value) || 0; });
+        const totalElement = document.getElementById(`total-${studentId}`);
+        if (totalElement) totalElement.innerText = sum;
+    }
+
+    async function saveInlineGrade(studentId, date, inputElement) {
+        let val = parseFloat(inputElement.value) || 0;
+        try {
+            const res = await fetch('/save_grade/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ student_id: studentId, date: date, grade: val })
+            });
+            if (res.ok) {
+                inputElement.classList.toggle("filled", val > 0);
+                updateStudentTotal(studentId);
+            }
+        } catch (e) { console.error("Ошибка сохранения"); }
+    }
+</script>
+{% endblock %}

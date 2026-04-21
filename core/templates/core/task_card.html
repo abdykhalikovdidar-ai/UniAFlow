@@ -1,0 +1,20 @@
+<div class="task-card" draggable="true" ondragstart="drag(event)" id="task-{{ task.id }}">
+    <div class="task-title">{{ task.title }}</div>
+    
+    {% if task.file %}
+        <div style="font-size: 12px; color: #0052cc;">📎 Файл прикреплен</div>
+    {% endif %}
+
+    <div class="task-meta">
+        <span>👤 {{ task.executor.username }}</span>
+        
+        <div style="display:flex; align-items:center;">
+            {% if task.grade %}
+                <span class="grade-badge">{{ task.grade }} б.</span>
+            {% endif %}
+            
+            <a href="{% url 'edit_task' task.id %}" class="edit-icon">✏️</a>
+            <a href="{% url 'delete_task' task.id %}" class="edit-icon" style="color: #ff5630;" onclick="return confirm('Удалить?')">🗑</a>
+        </div>
+    </div>
+</div>

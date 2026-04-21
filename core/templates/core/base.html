@@ -1,0 +1,237 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}UniFlow{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light') {
+                document.documentElement.classList.add('light-mode');
+            }
+        })();
+    </script>
+
+    <style>
+        /* --- ДИНАМИЧЕСКАЯ ЦВЕТОВАЯ ПАЛИТРА --- */
+        :root {
+            {% if user.is_authenticated %}
+                {% if user.profile.role == 'teacher' %}
+                    /* =========================================
+                       АВТОРИЗОВАН: УЧИТЕЛЬ (СТРОГИЙ ИЗУМРУДНЫЙ)
+                       ========================================= */
+                    --accent: #10b981; 
+                    --accent-light: #34d399;
+                    --sidebar-border: rgba(16, 185, 129, 0.4);
+                    --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+                    
+                    --bg-body: #0b1410; 
+                    --bg-card: rgba(255, 255, 255, 0.03);
+                    --bg-chat-inner: #0b0d0c;
+                    --text-main: #ffffff;
+                    --text-gray: #a3aed0;
+                    --input-bg: rgba(0, 0, 0, 0.2);
+                {% else %}
+                    /* =========================================
+                       АВТОРИЗОВАН: СТУДЕНТ (СТРОГИЙ СИНИЙ)
+                       ========================================= */
+                    --accent: #4318ff;
+                    --accent-light: #868CFF;
+                    --sidebar-border: rgba(67, 24, 255, 0.3); 
+                    --shadow-glow: 0 0 15px rgba(67, 24, 255, 0.3);
+                    
+                    --bg-body: #0b1437;
+                    --bg-card: #111c44;
+                    --bg-chat-inner: #111c44;
+                    --text-main: #ffffff;
+                    --text-gray: #a3aed0;
+                    --input-bg: #0b1437;
+                {% endif %}
+            {% else %}
+                /* =========================================
+                   НЕ АВТОРИЗОВАН: ВХОД И РЕГИСТРАЦИЯ (ОБЩИЙ ЦВЕТ)
+                   ========================================= */
+                /* Нейтральный стильный бирюзовый (cyan), отлично подходит для логина */
+                --accent: #00e5ff; 
+                --accent-light: #80f2ff;
+                --sidebar-border: rgba(0, 229, 255, 0.5); /* Более яркая рамка */
+                --shadow-glow: 0 0 35px rgba(0, 229, 255, 0.35); /* Более широкое свечение */
+                
+                --bg-body: #0f172a; 
+                --bg-card: rgba(255, 255, 255, 0.02);
+                --bg-chat-inner: #0f172a;
+                --text-main: #ffffff;
+                --text-gray: #94a3b8;
+                --input-bg: rgba(0, 0, 0, 0.3);
+            {% endif %}
+            
+            --hover-bg: rgba(255,255,255,0.05);
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* --- СВЕТЛАЯ ТЕМА --- */
+        .light-mode {
+            {% if user.is_authenticated %}
+                {% if user.profile.role == 'teacher' %}
+                    --accent: #059669;
+                    --sidebar-border: rgba(5, 150, 105, 0.3);
+                {% else %}
+                    --accent: #4318ff;
+                    --sidebar-border: #add8e6; 
+                {% endif %}
+            {% else %}
+                /* Светлая тема для Входа/Регистрации */
+                --accent: #0284c7;
+                --sidebar-border: rgba(2, 132, 199, 0.3);
+            {% endif %}
+            
+            --bg-body: #f4f7fe;
+            --bg-card: #ffffff;
+            --bg-chat-inner: #ffffff;
+            --text-main: #2b3674;
+            --text-gray: #707eae;
+            --hover-bg: #f4f7fe;
+            --input-bg: #f8fafc;
+            --shadow-glow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'DM Sans', sans-serif;
+            display: flex; height: 100vh; overflow: hidden;
+            transition: background 0.5s ease, color 0.3s ease;
+        }
+
+        /* Обводки для главных блоков */
+        .sidebar, .modal-card {
+            border: 2px solid var(--sidebar-border) !important;
+            box-shadow: var(--shadow-glow) !important;
+            border-radius: 35px !important;
+        }
+
+        /* --- САЙДБАР (ФИКС ВЫСОТЫ И ВЫХОДА) --- */
+        .sidebar {
+            width: 90px; height: 94vh; margin: 3vh 0 3vh 15px;
+            background: var(--bg-card); backdrop-filter: blur(20px);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 25px 0; z-index: 1000; flex-shrink: 0;
+            transition: var(--transition);
+            justify-content: space-between;
+        }
+
+        .sidebar-top, .sidebar-bottom { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+        .profile-link {
+            width: 52px; height: 52px; margin-bottom: 25px;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; border-radius: 50% !important; overflow: hidden; 
+            background: var(--accent); color: white; font-weight: 900; 
+            font-size: 22px; text-transform: uppercase; border: 2px solid var(--sidebar-border); 
+            box-shadow: 0 5px 15px var(--sidebar-border); transition: 0.3s;
+        }
+        .profile-link:hover { transform: scale(1.1); box-shadow: 0 0 20px var(--accent); }
+        .profile-img { width: 100%; height: 100%; object-fit: cover; }
+
+        .nav-item {
+            width: 50px; height: 50px; border-radius: 18px !important;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--text-gray); text-decoration: none; font-size: 24px;
+            margin-bottom: 8px; transition: 0.3s; position: relative;
+            background: transparent; border: none; cursor: pointer;
+        }
+        .nav-item:hover { background: var(--hover-bg); color: var(--accent); transform: translateX(3px); }
+        .nav-item.active { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%); color: white; box-shadow: 0 10px 20px var(--shadow-glow); }
+
+        /* --- ЛАМПОЧКА --- */
+        .bulb-btn { border: 1px solid var(--sidebar-border) !important; border-radius: 15px !important; margin-bottom: 10px; }
+        .bulb-icon { font-size: 22px; transition: 0.3s; filter: grayscale(100%) opacity(0.4); }
+        .light-mode .bulb-icon { filter: grayscale(0%) opacity(1) drop-shadow(0 0 8px #ffb547); }
+
+        .badge { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; background: #ff3d3d; border-radius: 50%; border: 2px solid var(--bg-card); }
+
+        /* --- ВЫХОД: ВИДИМОСТЬ В БЕЛОЙ ТЕМЕ --- */
+        .logout-btn { color: var(--text-gray); margin-bottom: 0; }
+        .logout-btn svg { transition: all 0.3s ease; width: 22px; stroke: var(--text-gray); }
+        .light-mode .logout-btn svg { stroke: #2b3674; }
+        .logout-btn:hover { background: rgba(239, 68, 68, 0.1) !important; }
+        .logout-btn:hover svg { stroke: #ef4444; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8)); }
+
+        .main-content { flex-grow: 1; padding: 25px; overflow-y: auto; margin-left: 10px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--sidebar-border); border-radius: 10px; }
+
+    </style>
+
+    {% block extra_style %}{% endblock %}
+</head>
+<body id="main-body">
+
+    <nav class="sidebar">
+        {% if user.is_authenticated %}
+            <div class="sidebar-top">
+                <a href="{% url 'profile' %}" class="profile-link" title="Профиль">
+                    {% if user.profile.image and 'default' not in user.profile.image.url %}
+                        <img src="{{ user.profile.image.url }}" class="profile-img">
+                    {% else %}
+                        {{ user.first_name|default:user.username|slice:":1"|upper }}
+                    {% endif %}
+                </a>
+
+                <a href="{% url 'index' %}" class="nav-item {% if request.resolver_match.url_name == 'index' %}active{% endif %}" title="Доска">🏠</a>
+                
+                {% if user.profile.role == 'teacher' %}
+                    <a href="{% url 'teacher_journal' %}" class="nav-item {% if request.resolver_match.url_name == 'teacher_journal' %}active{% endif %}" title="Журнал групп">📊</a>
+                {% else %}
+                    <a href="{% url 'stats' %}" class="nav-item {% if request.resolver_match.url_name == 'stats' %}active{% endif %}" title="Мои успехи">📉</a>
+                {% endif %}
+                
+                <a href="{% url 'assignments_page' %}" class="nav-item {% if request.resolver_match.url_name == 'assignments_page' %}active{% endif %}" title="Задания">🎒</a>
+                
+                <a href="{% url 'messages_page' %}" class="nav-item {% if request.resolver_match.url_name == 'messages_page' %}active{% endif %}" title="Чат">
+                    💬
+                    {% if notifications_count > 0 %}<span class="badge"></span>{% endif %}
+                </a>
+            </div>
+            
+            <div class="sidebar-bottom">
+                <button class="nav-item bulb-btn" onclick="toggleTheme()" title="Сменить тему">
+                    <span class="bulb-icon">💡</span>
+                </button>
+                
+                <form action="{% url 'logout' %}" method="post" style="display: contents;">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-item logout-btn" title="Выход">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <div style="font-weight:900; color:var(--accent); font-size:28px; margin-top:20px;">U</div>
+            <a href="{% url 'login' %}" class="nav-item active" title="Войти">🔑</a>
+        {% endif %}
+    </nav>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('light-mode');
+            const isLight = html.classList.contains('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+    </script>
+</body>
+</html>

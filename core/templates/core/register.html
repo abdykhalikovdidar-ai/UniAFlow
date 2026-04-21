@@ -1,0 +1,279 @@
+{% extends "core/base.html" %}
+
+{% block title %}Регистрация | UniFlow 🚀{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* ФИКС ТЕМЫ: Принудительно устанавливаем темные переменные для этой страницы */
+    :root {
+        --bg-card: rgba(15, 23, 42, 0.6) !important;
+        --text-main: #ffffff !important;
+        --text-gray: #94a3b8 !important;
+        --sidebar-border: rgba(0, 229, 255, 0.3) !important;
+        --accent: #00e5ff !important;
+        --accent-light: #00b8d4 !important;
+        --input-bg: rgba(2, 6, 23, 0.4) !important;
+        --hover-bg: rgba(30, 41, 59, 0.5) !important;
+        --shadow-glow: 0 0 25px rgba(0, 229, 255, 0.2) !important;
+    }
+
+    /* 1. Настройка основного контейнера */
+    .sidebar { display: none !important; }
+    
+    .main-content { 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        display: flex !important;        
+        align-items: center !important;   
+        justify-content: center !important; 
+        width: 100vw !important;
+        height: 100vh !important;
+        background: #070b1d !important;
+    }
+    
+    /* 2. Живой градиент фона */
+    body#main-body {
+        margin: 0; padding: 0;
+        background: linear-gradient(-45deg, #0f172a, #1e293b, #0b1437, #111c44) !important;
+        background-size: 400% 400% !important;
+        animation: gradientBG 12s ease infinite !important;
+        overflow-x: hidden;
+    }
+
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    @keyframes slideFromLeft {
+        from { opacity: 0; transform: translateX(-60px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideFromRight {
+        from { opacity: 0; transform: translateX(60px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    .split-layout {
+        display: flex; align-items: center; justify-content: center;
+        max-width: 1350px; width: 95%; gap: 80px;
+    }
+
+    .auth-card-section { 
+        width: 100%; max-width: 420px; 
+        opacity: 0;
+        animation: slideFromLeft 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; 
+    }
+
+    .auth-card {
+        background: var(--bg-card); backdrop-filter: blur(50px);
+        -webkit-backdrop-filter: blur(50px); padding: 45px 35px; border-radius: 40px;
+        text-align: center; color: #fff;
+        border: 2px solid var(--sidebar-border);
+        box-shadow: var(--shadow-glow), 0 60px 120px rgba(0, 0, 0, 0.5);
+    }
+
+    .auth-logo-text { font-size: 30px; font-weight: 900; margin-bottom: 8px; letter-spacing: -1px; color: #fff; }
+    .auth-subtitle { color: var(--text-gray); font-size: 14px; margin-bottom: 30px; }
+
+    .role-selection { display: flex; gap: 12px; margin-bottom: 25px; }
+    .role-option { flex: 1; position: relative; cursor: pointer; }
+    .role-option input { position: absolute; opacity: 0; }
+    .role-card {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 12px; background: rgba(255,255,255,0.05); border-radius: 18px;
+        transition: 0.3s; border: 1px solid transparent; color: var(--text-gray);
+    }
+    .role-card .icon { font-size: 22px; margin-bottom: 4px; filter: grayscale(1); transition: 0.3s; }
+    .role-card b { font-size: 10px; text-transform: uppercase; transition: 0.3s; }
+    
+    .role-option input:checked + .role-card { 
+        background: rgba(0, 229, 255, 0.15); 
+        border-color: var(--accent); 
+        box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); 
+        color: var(--accent);
+    }
+    .role-option input:checked + .role-card .icon { filter: grayscale(0); }
+    .role-option input:checked + .role-card b { color: var(--accent); }
+
+    .input-group { text-align: left; margin-bottom: 18px; }
+    .input-label { display: block; font-size: 10px; font-weight: 900; color: var(--text-gray); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1.5px; }
+    
+    .auth-input {
+        width: 100%; padding: 15px 22px; border-radius: 18px;
+        background: var(--input-bg); color: #fff; border: 1px solid rgba(255,255,255,0.1);
+        font-size: 14px; outline: none; box-sizing: border-box; transition: 0.3s;
+    }
+    .auth-input:focus { 
+        background: rgba(15, 23, 42, 0.8); 
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.1);  
+    }
+    .auth-input::placeholder { color: var(--text-gray); opacity: 0.5; }
+
+    .password-wrapper { position: relative; display: flex; align-items: center; }
+    .toggle-password { position: absolute; right: 20px; cursor: pointer; font-size: 18px; opacity: 0.5; transition: 0.3s; user-select: none; color: var(--text-gray); }
+    .toggle-password:hover { opacity: 1; color: var(--accent); }
+
+    .btn-auth {
+        width: 100%; padding: 18px; 
+        background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+        color: white; border: none; border-radius: 20px; font-weight: 900; font-size: 16px; cursor: pointer;
+        margin-top: 15px; box-shadow: 0 15px 35px rgba(0, 229, 255, 0.3); transition: 0.4s; text-transform: uppercase;
+    }
+    .btn-auth:hover { transform: translateY(-4px); box-shadow: 0 25px 55px rgba(0, 229, 255, 0.4); }
+
+    .auth-footer { margin-top: 30px; font-size: 14px; color: var(--text-gray); }
+    .auth-footer a { color: var(--accent); font-weight: 800; text-decoration: none; margin-left: 8px; transition: 0.3s; }
+    .auth-footer a:hover { text-shadow: 0 0 10px var(--accent); }
+
+    .welcome-section {
+        flex: 1.3; color: #fff; text-align: center; 
+        display: flex; flex-direction: column; align-items: center;
+        opacity: 0;
+        animation: slideFromRight 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    }
+
+    .welcome-badge {
+        display: inline-block; background: rgba(255, 255, 255, 0.1);
+        padding: 8px 24px; border-radius: 50px; font-size: 13px; font-weight: 900;
+        text-transform: uppercase; letter-spacing: 2px; margin-bottom: 30px;
+        backdrop-filter: blur(10px); color: var(--accent);
+        border: 1px solid var(--sidebar-border);
+    }
+
+    .welcome-title { font-size: 72px; font-weight: 900; line-height: 1.05; margin-bottom: 25px; letter-spacing: -3px; color: #fff; }
+    .welcome-title span { 
+        background: linear-gradient(135deg, var(--accent-light), var(--accent));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+        text-shadow: 0 15px 50px var(--sidebar-border); 
+    }
+
+    .welcome-desc { font-size: 22px; color: var(--text-gray); line-height: 1.6; margin-bottom: 60px; max-width: 650px; }
+
+    .feature-list { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 520px; }
+    .feature-item {
+        display: flex; align-items: center; gap: 25px; background: var(--bg-card);
+        padding: 25px 35px; border-radius: 30px; backdrop-filter: blur(25px); border: 1px solid var(--sidebar-border); transition: 0.5s;
+        color: #fff;
+    }
+    .feature-item:hover { 
+        background: var(--hover-bg); transform: scale(1.04) translateY(-5px); 
+    }
+    .feature-icon { font-size: 38px; }
+    .feature-text { font-weight: 700; font-size: 19px; text-align: left; }
+
+    .continue-hint {
+        margin-top: 60px; font-size: 15px; font-weight: 800; color: var(--text-gray);
+        letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 20px;
+    }
+    .continue-hint::before, .continue-hint::after { content: ""; width: 60px; height: 1px; background: var(--sidebar-border); opacity: 0.5; }
+
+    @media (max-width: 1100px) {
+        .split-layout { flex-direction: column-reverse; text-align: center; gap: 60px; padding: 100px 0; }
+        .welcome-title { font-size: 48px; }
+        .main-content { overflow-y: auto; height: auto !important; }
+        .auth-card { padding: 40px 30px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="split-layout">
+    <div class="auth-card-section">
+        <div class="auth-card">
+            <div class="auth-logo-text">Регистрация</div>
+            <div class="auth-subtitle">Создайте профиль UniFlow</div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <label class="input-label">Ваша роль</label>
+                <div class="role-selection">
+                    <label class="role-option">
+                        <input type="radio" name="role" value="student" checked>
+                        <div class="role-card">
+                            <span class="icon">🎓</span>
+                            <b>Студент</b>
+                        </div>
+                    </label>
+                    <label class="role-option">
+                        <input type="radio" name="role" value="teacher">
+                        <div class="role-card">
+                            <span class="icon">👨‍🏫</span>
+                            <b>Учитель</b>
+                        </div>
+                    </label>
+                </div>
+
+                {% for field in form %}
+                    {% if field.name != 'role' %}
+                    <div class="input-group">
+                        <label class="input-label">{{ field.label }}</label>
+                        <div class="{% if 'password' in field.name %}password-wrapper{% endif %}">
+                            <input type="{{ field.field.widget.input_type }}" 
+                                   name="{{ field.name }}" 
+                                   id="id_reg_{{ field.name }}"
+                                   class="auth-input" 
+                                   placeholder="Введите {{ field.label|lower }}"
+                                   required autocomplete="off">
+                            
+                            {% if 'password' in field.name %}
+                                <span class="toggle-password" onclick="togglePass('id_reg_{{ field.name }}', this)">👁️</span>
+                            {% endif %}
+                        </div>
+                        {% if field.errors %}
+                            <small style="color: #ff5c5c; font-size: 11px; margin-top: 5px; display: block; font-weight: bold;">
+                                {{ field.errors.0 }}
+                            </small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                <button type="submit" class="btn-auth">СОЗДАТЬ АККАУНТ ➔</button>
+                
+                <div class="auth-footer">
+                    Уже с нами? <a href="{% url 'login' %}">Войти</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="welcome-section">
+        <div class="welcome-badge">UniFlow Registration</div>
+        <h1 class="welcome-title">Присоединяйтесь <br>к <span>UniFlow</span></h1>
+        <p class="welcome-desc">Твое пространство для эффективного обучения. Управляй проектами, следи за рейтингом и будь лучшим в своей группе.</p>
+        
+        <div class="feature-list">
+            <div class="feature-item">
+                <span class="feature-icon">📝</span>
+                <span class="feature-text">Быстрая настройка профиля</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🎒</span>
+                <span class="feature-text">Умный органайзер проектов</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">🤝</span>
+                <span class="feature-text">Единая экосистема обучения</span>
+            </div>
+        </div>
+        <div class="continue-hint">сделайте первый шаг к успеху</div>
+    </div>
+</div>
+
+<script>
+    function togglePass(inputId, el) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            el.textContent = "🕶️";
+        } else {
+            input.type = "password";
+            el.textContent = "👁️";
+        }
+    }
+</script>
+{% endblock %}

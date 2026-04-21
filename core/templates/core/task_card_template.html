@@ -1,0 +1,25 @@
+<div class="task-card" draggable="true" ondragstart="drag(event)" id="task-{{ task.id }}">
+    <div class="task-header">
+        <span class="task-title">{{ task.title }}</span>
+        <div class="task-actions">
+            <a href="{% url 'edit_task' task.id %}" class="action-icon edit-icon" title="Редактировать">✏️</a>
+            
+            <button class="action-icon delete-icon" title="Удалить" 
+                    onclick="openDeleteModal('{% url 'delete_task' task.id %}')">
+                ❌
+            </button>
+        </div>
+    </div>
+
+    {% if task.file %}
+        <a href="{{ task.file.url }}" class="file-link" target="_blank">📄 Файл</a>
+    {% endif %}
+
+    {% if task.status == 'doing' %}
+        <a href="{% url 'send_review' task.id %}" style="text-decoration: none;">
+            <button style="width: 100%; margin-top: 10px; background: #eef4ff; color: #0052cc; border: none; padding: 8px; border-radius: 6px; font-weight: 800; font-size: 11px; cursor: pointer;">
+                Отправить на проверку 📤
+            </button>
+        </a>
+    {% endif %}
+</div>

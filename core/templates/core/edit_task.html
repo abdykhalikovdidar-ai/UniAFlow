@@ -1,0 +1,138 @@
+{% extends "core/base.html" %}
+
+{% block title %}Редактировать задачу | UniFlow{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* =========================================================
+       СВЕТЛАЯ ТЕМА
+       ========================================================= */
+    .edit-container { display: flex; justify-content: center; align-items: center; min-height: 85vh; padding: 20px; }
+
+    .edit-card {
+        background-color: #ffffff !important;
+        padding: 40px; border-radius: 24px; width: 100%; max-width: 500px;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+        color: #2d3748 !important;
+    }
+    
+    .styled-input {
+        width: 100%; padding: 15px 18px; border-radius: 12px;
+        background-color: #f1f5f9 !important; border: 1px solid #cbd5e0 !important;
+        color: #2d3748 !important; outline: none; box-sizing: border-box; font-weight: 600;
+    }
+
+    .file-upload-solid-wrapper {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; 
+        width: 100%; padding: 25px; 
+        background-color: #f1f5f9 !important; border: 2px dashed #a0aec0 !important; 
+        color: #4a5568 !important; border-radius: 16px; cursor: pointer; text-align: center;
+    }
+
+    .current-file-card {
+        display: flex; align-items: center; background-color: #ebf4ff !important; border: 1px dashed #2b6cb0 !important;
+        padding: 12px 15px; border-radius: 12px; margin-bottom: 15px; color: #2b6cb0 !important;
+    }
+
+    /* =========================================================
+       ТЕМНАЯ ТЕМА (Плотные, солидные цвета!)
+       ========================================================= */
+    body.dark-mode .edit-card {
+        background-color: #111c44 !important; /* Плотный темно-синий фон! */
+        border: 1px solid #3e4e68 !important; /* Серо-синяя рамка */
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+        color: #ffffff !important;
+    }
+
+    body.dark-mode .styled-input,
+    body.dark-mode .file-upload-solid-wrapper,
+    body.dark-mode .current-file-card {
+        background-color: #0b1437 !important; /* Вдавленный темный фон инпутов */
+        border: 1px solid #2d3748 !important;
+        color: #ffffff !important;
+    }
+    
+    body.dark-mode .file-upload-solid-wrapper {
+        border: 2px dashed #4a5568 !important;
+    }
+    body.dark-mode .file-upload-solid-wrapper:hover {
+        background-color: #1a235a !important;
+        border-color: #3b82f6 !important; /* Синеет только при наведении */
+    }
+
+    /* --- КНОПКИ --- */
+    .btn-save {
+        background-color: #0052cc !important; color: #ffffff !important; border: none !important;
+        width: 100%; padding: 15px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 25px;
+    }
+    .btn-cancel {
+        display: block; text-align: center; width: 100%; margin-top: 15px; 
+        color: gray !important; font-weight: 700; text-decoration: none;
+    }
+
+    .file-upload-solid-wrapper input[type="file"] { display: none; }
+    h2 { text-align: center; margin-bottom: 30px; font-weight: 900; }
+    .label-text { display: block; font-size: 13px; margin-bottom: 8px; font-weight: 800; opacity: 0.8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="edit-card">
+        <h2>✏️ Редактирование</h2>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="label-text">Название задачи</label>
+                <input type="text" name="title" value="{{ task.title }}" class="styled-input" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label class="label-text">Файлы проекта</label>
+                
+                {% if task.file %}
+                    <div class="current-file-card">
+                        <span style="font-size: 20px; margin-right: 10px;">📄</span>
+                        <div style="overflow: hidden;">
+                            <span style="font-size: 11px; opacity: 0.7;">Уже загружено:</span><br>
+                            <a href="{{ task.file.url }}" target="_blank" style="color: inherit; font-weight: bold; text-decoration: none;">{{ task.file.name|slice:"15:" }}</a>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <label class="file-upload-solid-wrapper" id="drop-zone">
+                    <div style="font-size: 30px; color: #0052cc;" id="icon-upload">☁️</div>
+                    <div style="font-size: 14px; font-weight: bold;" id="upload-text">Нажмите, чтобы загрузить новый файл</div>
+                    <div style="font-size: 11px; opacity: 0.6;" id="upload-subtext">(Word, Excel, PDF или PPT)</div>
+                    <input type="file" name="file" id="real-file-input">
+                </label>
+            </div>
+
+            <button type="submit" class="btn-save">Сохранить изменения</button>
+            <a href="{% url 'index' %}" class="btn-cancel">← Отмена</a>
+        </form>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('real-file-input');
+    const uploadText = document.getElementById('upload-text');
+    const uploadSubtext = document.getElementById('upload-subtext');
+    const iconUpload = document.getElementById('icon-upload');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', function() {
+        if (this.files && this.files.length > 0) {
+            uploadText.textContent = "Готово к загрузке: " + this.files[0].name;
+            uploadText.style.color = "#48bb78";
+            uploadSubtext.style.display = "none";
+            iconUpload.textContent = "✅";
+            dropZone.style.borderColor = "#48bb78";
+            dropZone.style.backgroundColor = "rgba(72, 187, 120, 0.1)";
+        }
+    });
+</script>
+{% endblock %}
